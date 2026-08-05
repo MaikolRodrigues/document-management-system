@@ -1,6 +1,9 @@
 const fs = require('node:fs');
+const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const documentsRepository = require('../repositories/documents.repository');
+
+const storageRootPath = path.resolve(__dirname, '../../storage');
 
 class HttpError extends Error {
   constructor(statusCode, message) {
@@ -31,45 +34,77 @@ function createDocumentMetadata(file, owner) {
   };
 }
 
-function uploadDocument(file, ownerInput) {
-  if (!file) {
-    throw new HttpError(400, 'Arquivo é obrigatório para upload.');
+function isPathInsideStorage(targetPath) {
+  let storageRealPath;
+  let targetRealPath;
+
+  try {
+    storageRealPath = fs.realpathSync(storageRootPath);
+    targetRealPath = fs.realpathSync(targetPath);
+  } catch {
+    return false;
   }
 
-  const owner = normalizeOwner(ownerInput);
-  if (!owner) {
-    throw new HttpError(400, 'Owner é obrigatório para upload.');
-  }
-
-  const metadata = createDocumentMetadata(file, owner);
-  return documentsRepository.save(metadata);
+  return (
+    targetRealPath === storageRealPath ||
+    targetRealPath.startsWith(`${storageRealPath}${path.sep}`)
+  );
 }
 
-function listDocuments(ownerInput) {
-  const owner = normalizeOwner(ownerInput);
-  return documentsRepository.list(owner || null);
+function createDocumentsService(repository = documentsRepository) {
+  function uploadDocument(file, ownerInput) {
+    if (!file) {
+      throw new HttpError(400, 'Arquivo é obrigatório para upload.');
+    }
+
+    const owner = normalizeOwner(ownerInput);
+    if (!owner) {
+      throw new HttpError(400, 'Owner é obrigatório para upload.');
+    }
+
+    const metadata = createDocumentMetadata(file, owner);
+    return repository.save(metadata);
+  }
+
+  function listDocuments(ownerInput) {
+    const owner = normalizeOwner(ownerInput);
+    return repository.list(owner || null);
+  }
+
+  function getDocumentForDownload(id) {
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new HttpError(400, 'Id do documento é inválido.');
+    }
+
+    const document = repository.findById(id.trim());
+    if (!document) {
+      throw new HttpError(404, 'Documento não encontrado.');
+    }
+
+    if (!fs.existsSync(document.storagePath)) {
+      throw new HttpError(410, 'Arquivo não está mais disponível para download.');
+    }
+
+    if (!isPathInsideStorage(document.storagePath)) {
+      throw new HttpError(403, 'Caminho de arquivo inválido para download.');
+    }
+
+    return document;
+  }
+
+  return {
+    uploadDocument,
+    listDocuments,
+    getDocumentForDownload,
+  };
 }
 
-function getDocumentForDownload(id) {
-  if (typeof id !== 'string' || !id.trim()) {
-    throw new HttpError(400, 'Id do documento é inválido.');
-  }
-
-  const document = documentsRepository.findById(id.trim());
-  if (!document) {
-    throw new HttpError(404, 'Documento não encontrado.');
-  }
-
-  if (!fs.existsSync(document.storagePath)) {
-    throw new HttpError(410, 'Arquivo não está mais disponível para download.');
-  }
-
-  return document;
-}
+const service = createDocumentsService();
 
 module.exports = {
   HttpError,
-  uploadDocument,
-  listDocuments,
-  getDocumentForDownload
+  createDocumentsService,
+  uploadDocument: service.uploadDocument,
+  listDocuments: service.listDocuments,
+  getDocumentForDownload: service.getDocumentForDownload
 };

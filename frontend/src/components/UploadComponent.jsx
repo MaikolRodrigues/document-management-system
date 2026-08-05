@@ -22,15 +22,11 @@ export default function UploadComponent({ onUpload, isUploading }) {
       return;
     }
 
-    try {
-      await onUpload({ file: selectedFile, owner: normalizedOwner });
-      setSelectedFile(null);
-      setOwner('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch {
-      // O erro é exibido no nível do App para manter resposta consistente.
+    await onUpload({ file: selectedFile, owner: normalizedOwner });
+    setSelectedFile(null);
+    setOwner('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   }
 

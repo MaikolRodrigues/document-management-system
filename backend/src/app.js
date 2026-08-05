@@ -34,7 +34,10 @@ app.use((err, req, res, next) => {
   const statusCode = Number.isInteger(err.statusCode) ? err.statusCode : 500;
   const message = statusCode === 500 ? 'Erro interno do servidor.' : err.message;
 
-  return res.status(statusCode).json({ error: message });
+  return res.status(statusCode).json({
+    message,
+    error: message
+  });
 });
 
 if (require.main === module) {

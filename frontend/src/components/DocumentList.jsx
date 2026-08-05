@@ -22,6 +22,8 @@ export default function DocumentList({
   documents,
   ownerFilter,
   onOwnerFilterChange,
+  onApplyOwnerFilter,
+  onClearOwnerFilter,
   onRefresh,
   onDownload,
   downloadingId,
@@ -39,6 +41,12 @@ export default function DocumentList({
           placeholder="Filtrar por owner"
           disabled={isLoading}
         />
+        <button type="button" onClick={onApplyOwnerFilter} disabled={isLoading}>
+          Aplicar filtro
+        </button>
+        <button type="button" onClick={onClearOwnerFilter} disabled={isLoading}>
+          Limpar filtro
+        </button>
         <button type="button" onClick={onRefresh} disabled={isLoading}>
           {isLoading ? 'Atualizando...' : 'Atualizar'}
         </button>

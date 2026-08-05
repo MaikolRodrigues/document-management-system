@@ -20,7 +20,8 @@ function triggerFileDownload(blob, filename) {
 
 export default function App() {
   const [documents, setDocuments] = useState([]);
-  const [ownerFilter, setOwnerFilter] = useState('');
+  const [ownerFilterInput, setOwnerFilterInput] = useState('');
+  const [appliedOwnerFilter, setAppliedOwnerFilter] = useState('');
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState('');
@@ -32,14 +33,14 @@ export default function App() {
     setIsLoadingDocuments(true);
 
     try {
-      const loadedDocuments = await listDocuments(ownerFilter);
+      const loadedDocuments = await listDocuments(appliedOwnerFilter);
       setDocuments(loadedDocuments);
     } catch (error) {
       setErrorMessage(error.message || 'Erro ao listar documentos.');
     } finally {
       setIsLoadingDocuments(false);
     }
-  }, [ownerFilter]);
+  }, [appliedOwnerFilter]);
 
   useEffect(() => {
     loadDocuments();
@@ -78,6 +79,15 @@ export default function App() {
     }
   }
 
+  function handleApplyOwnerFilter() {
+    setAppliedOwnerFilter(ownerFilterInput.trim());
+  }
+
+  function handleClearOwnerFilter() {
+    setOwnerFilterInput('');
+    setAppliedOwnerFilter('');
+  }
+
   return (
     <main
       style={{
@@ -101,8 +111,10 @@ export default function App() {
 
       <DocumentList
         documents={documents}
-        ownerFilter={ownerFilter}
-        onOwnerFilterChange={setOwnerFilter}
+        ownerFilter={ownerFilterInput}
+        onOwnerFilterChange={setOwnerFilterInput}
+        onApplyOwnerFilter={handleApplyOwnerFilter}
+        onClearOwnerFilter={handleClearOwnerFilter}
         onRefresh={loadDocuments}
         onDownload={handleDownload}
         downloadingId={downloadingId}

@@ -7,7 +7,11 @@ function parseFilenameFromDisposition(contentDisposition) {
 
   const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
   if (utf8Match?.[1]) {
-    return decodeURIComponent(utf8Match[1]);
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return null;
+    }
   }
 
   const asciiMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
@@ -15,17 +19,25 @@ function parseFilenameFromDisposition(contentDisposition) {
 }
 
 async function parseErrorResponse(response) {
-  const contentType = response.headers.get('content-type') || '';
+  const rawBody = await response.text();
+  if (!rawBody) {
+    return 'Erro inesperado na comunicação com o servidor.';
+  }
 
-  if (contentType.includes('application/json')) {
-    const data = await response.json();
+  try {
+    const data = JSON.parse(rawBody);
     if (typeof data?.message === 'string' && data.message.trim()) {
       return data.message;
     }
+
+    if (typeof data?.error === 'string' && data.error.trim()) {
+      return data.error;
+    }
+  } catch {
+    return rawBody;
   }
 
-  const text = await response.text();
-  return text || 'Erro inesperado na comunicação com o servidor.';
+  return rawBody;
 }
 
 async function assertOk(response) {

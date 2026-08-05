@@ -7,10 +7,30 @@ const documentsController = require('../controllers/documents.controller');
 const router = express.Router();
 const storagePath = path.resolve(__dirname, '../../storage');
 const maxUploadSizeInBytes = Number.parseInt(process.env.MAX_UPLOAD_SIZE_BYTES, 10) || 10 * 1024 * 1024;
+const disallowedExtensions = new Set([
+  '.bat',
+  '.cmd',
+  '.com',
+  '.cpl',
+  '.exe',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.msi',
+  '.ps1',
+  '.scr',
+  '.sh',
+]);
+
+fs.mkdirSync(storagePath, { recursive: true });
+
+function isAllowedUploadFile(file) {
+  const extension = path.extname(file?.originalname || '').toLowerCase();
+  return !disallowedExtensions.has(extension);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    fs.mkdirSync(storagePath, { recursive: true });
     callback(null, storagePath);
   },
   filename: (req, file, callback) => {
@@ -26,6 +46,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
+  fileFilter: (req, file, callback) => {
+    if (isAllowedUploadFile(file)) {
+      return callback(null, true);
+    }
+
+    const error = new Error('Tipo de arquivo não permitido para upload.');
+    error.statusCode = 400;
+    return callback(error);
+  },
   limits: {
     fileSize: maxUploadSizeInBytes
   }
