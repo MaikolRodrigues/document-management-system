@@ -69,6 +69,19 @@ test('POST /upload retorna 400 quando arquivo está ausente', async () => {
   assert.strictEqual(payload.message, 'Arquivo é obrigatório para upload.');
 });
 
+test('POST /upload envia documento com sucesso', async () => {
+  const response = await sendUpload({ owner: 'alice', filename: 'contract.txt', content: 'contract-data' });
+
+  assert.strictEqual(response.status, 201);
+  const payload = await response.json();
+
+  assert.ok(payload.id);
+  assert.strictEqual(payload.originalName, 'contract.txt');
+  assert.strictEqual(payload.owner, 'alice');
+  assert.ok(payload.storagePath);
+  assert.strictEqual(fs.existsSync(payload.storagePath), true);
+});
+
 test('POST /upload retorna 400 quando owner está ausente', async () => {
   const response = await sendUpload({ owner: undefined });
 
